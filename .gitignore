@@ -1,0 +1,30 @@
+# List of files to ignore by git
+
+# IDE files
+.idea/
+.vscode
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Django stuff:
+*.log
+local_settings.py
+static_files/
+media_files/
+db.sqlite3
+
+# Environments
+.env
+.env.prod
+.env.dev
+.env.staging
+.venv
+
+# env/
+venv/
+ENV/
+env.bak/
+venv.bak/
