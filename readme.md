@@ -3,6 +3,8 @@
 
 ## Getting started
 
+Required Python 3.11 or later
+
 ### Clone repository
 First you will need to clone down the repository.
 
