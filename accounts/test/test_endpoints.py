@@ -88,7 +88,7 @@ class TestListCreateUser(APITestCase):
         response = self.client.post('/api/v1/accounts/users/', data=data)
         self.assertEqual(response.status_code, 201)
         self.assertEqual(User.objects.count(), 2)
-        user = User.objects.get(email__exact="johndoe@example.com")
+        user = User.objects.filter(email__exact="johndoe@example.com").first()
         self.assertEqual(response.data, {'id': user.id,
                                          'first_name': user.first_name,
                                          'last_name': user.last_name,
@@ -113,7 +113,7 @@ class TestListCreateUser(APITestCase):
         }
         self.client = APIClient()
         response = self.client.post('/api/v1/accounts/users/', data=data)
-        user = User.objects.get(email__exact="johndoe@example.com")
+        user = User.objects.filter(email__exact="johndoe@example.com").first()
         self.assertEqual(response.data, {'id': user.id,
                                          'first_name': 'John',
                                          'last_name': 'Doe',
@@ -319,7 +319,7 @@ class TestRetrieveUpdateDestroyUser(APITestCase):
                                                    is_staff=True,
                                                    is_superuser=False, )
         self.client = APIClient()
-        refresh = RefreshToken.for_user(self.test_user)
+        refresh = RefreshToken.for_user(self.test_admin_user)
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {str(refresh.access_token)}')
 
     def test_get_request_access_unauthenticated_user_returns_401(self):
@@ -333,22 +333,22 @@ class TestRetrieveUpdateDestroyUser(APITestCase):
 
     def test_get_request_access_authenticated_non_admin_user_returns_403(self):
         """Test that a non-administrator user is not able to access other users than his own"""
+        self.client = APIClient()
+        refresh = RefreshToken.for_user(self.test_user)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {str(refresh.access_token)}')
         response = self.client.get('/api/v1/accounts/users/2')
         self.assertEqual(response.status_code, 403)
 
     def test_get_request_access_authenticated_admin_user_returns_200(self):
         """Test that an administrator user is able to access all users"""
-        self.client = APIClient()
-        refresh = RefreshToken.for_user(self.test_admin_user)
-        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {str(refresh.access_token)}')
         response = self.client.get('/api/v1/accounts/users/1')
         self.assertEqual(response.status_code, 200)
         response = self.client.get('/api/v1/accounts/users/2')
         self.assertEqual(response.status_code, 200)
 
     def test_get_request_return_correct_data(self):
-        response = response = self.client.get('/api/v1/accounts/users/1')
-        user = User.objects.get(email__exact="robert@gmail.com")
+        response = self.client.get('/api/v1/accounts/users/1')
+        user = User.objects.filter(email__exact="robert@gmail.com").first()
         self.assertEqual(response.data, {'id': user.id,
                                          'first_name': user.first_name,
                                          'last_name': user.last_name,
@@ -373,11 +373,14 @@ class TestRetrieveUpdateDestroyUser(APITestCase):
             "mobile_phone": "+34 99999999",
             "password": "StrongPassword1234",
         }
-        response = response = self.client.put('/api/v1/accounts/users/1', data=data)
+        response = self.client.put('/api/v1/accounts/users/1', data=data)
         self.assertEqual(response.status_code, 401)
 
     def test_put_request_access_authenticated_non_admin_user_returns_403(self):
         # first_name, mobile_phone fields are updated
+        self.client = APIClient()
+        refresh = RefreshToken.for_user(self.test_user)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {str(refresh.access_token)}')
         data = {
             "first_name": "Robertico JR",
             "last_name": "López Pérez",
@@ -388,7 +391,7 @@ class TestRetrieveUpdateDestroyUser(APITestCase):
             "mobile_phone": "+34 99999999",
             "password": "StrongPassword1234",
         }
-        response = response = self.client.put('/api/v1/accounts/users/2', data=data)
+        response = self.client.put('/api/v1/accounts/users/2', data=data)
         self.assertEqual(response.status_code, 403)
 
     def test_put_request_returns_200(self):
@@ -403,8 +406,8 @@ class TestRetrieveUpdateDestroyUser(APITestCase):
             "mobile_phone": "+34 99999999",
             "password": "StrongPassword1234",
         }
-        response = response = self.client.put('/api/v1/accounts/users/1', data=data)
-        user = User.objects.get(email__exact="robert@gmail.com")
+        response = self.client.put('/api/v1/accounts/users/1', data=data)
+        user = User.objects.filter(email__exact="robert@gmail.com").first()
         self.assertEqual(response.data, {'id': user.id,
                                          'first_name': user.first_name,
                                          'last_name': user.last_name,
@@ -425,8 +428,8 @@ class TestRetrieveUpdateDestroyUser(APITestCase):
         data = {
             "address": "Madrid España",
         }
-        response = response = self.client.patch('/api/v1/accounts/users/1', data=data)
-        user = User.objects.get(email__exact="robert@gmail.com")
+        response = self.client.patch('/api/v1/accounts/users/1', data=data)
+        user = User.objects.filter(email__exact="robert@gmail.com").first()
         self.assertEqual(response.data, {'id': user.id,
                                          'first_name': user.first_name,
                                          'last_name': user.last_name,
@@ -437,7 +440,28 @@ class TestRetrieveUpdateDestroyUser(APITestCase):
                                          'mobile_phone': user.mobile_phone,
                                          'is_admin_user': user.is_staff,
                                          })
+    
+    def test_delete_no_authenticated_user_returns_401(self):
+        self.client = APIClient()
+        response = self.client.delete('/api/v1/accounts/users/1')
+        self.assertEqual(response.status_code, 401)
+    
+    def test_delete_request_access_authenticated_user_no_owner_returns_403(self):
+        self.client = APIClient()
+        refresh = RefreshToken.for_user(self.test_user)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {str(refresh.access_token)}')
+        response = self.client.delete('/api/v1/accounts/users/2')
+        self.assertEqual(response.status_code, 403)
+    
+    def test_delete_request_access_authenticated_admin_user_returns_204(self):
+        response = self.client.delete('/api/v1/accounts/users/1')
+        self.assertEqual(response.status_code, 204)
 
+    def test_delete_request_access_authenticated_admin_user_only_change_attributes_deleted_and_is_active(self):
+        response = self.client.delete('/api/v1/accounts/users/1')
+        self.assertEqual(response.status_code, 204)
+        user = User.objects.filter(email__exact="robert@gmail.com").first()
+        self.assertFalse(user.is_active)
 
 class TestLoginUser(APITestCase):
     """Test /api/v1/accounts/users/login endpoint, check responses and correct login credentials"""
