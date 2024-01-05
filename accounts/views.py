@@ -42,7 +42,7 @@ class RetrieveUpdateDestroyUser(RetrieveUpdateDestroyAPIView):
         instance = self.get_object()
         instance.is_active = False
         instance.save()
-        return Response({'Response': 'Se eliminó al usuario de forma correcta'}, status=status.HTTP_200_OK)
+        return Response({'Response': 'Se eliminó al usuario de forma correcta'}, status=status.HTTP_204_NO_CONTENT)
 
 
 class MyTokenObtainPairView(TokenObtainPairView):
